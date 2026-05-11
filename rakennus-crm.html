@@ -116,6 +116,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 .add-panel{background:#fff;border:1px solid #E67E22;border-radius:12px;padding:1.5rem;margin-top:1.25rem}
 .add-panel h3{font-size:15px;font-weight:600;margin-bottom:1rem}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-box{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-close{position:absolute;top:12px;right:14px;font-size:18px;cursor:pointer;color:#888;border:none;background:none;line-height:1}
+.modal-close:hover{color:#1a1a1a}
 </style>
 </head>
 <body>
@@ -377,17 +383,22 @@ function renderList(){
 }
 
 function renderDetail(){
-  const el=document.getElementById('detail-area');
-  if(!selected){el.innerHTML='';return;}
+  const existing=document.getElementById('modal-overlay');
+  if(existing)existing.remove();
+  if(!selected)return;
   const l=leads.find(x=>x.id===selected);
-  if(!l){el.innerHTML='';return;}
-  el.innerHTML=`<div class="panel">
-    <div class="panel-head">
-      <div>
-        <h2>${esc(l.company)}</h2>
-        <div class="sub">${esc(l.industry||'')}${l.phone?' · Aloitus: '+esc(l.phone):''}${l.email?' · Valmistuu: '+esc(l.email):''}</div>
-      </div>
-      <button class="btn" onclick="selected=null;render()">Sulje ✕</button>
+  if(!l)return;
+
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modal-overlay';
+  overlay.onclick=function(e){if(e.target===overlay)closeModal();};
+
+  overlay.innerHTML=`<div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div style="margin-bottom:1rem">
+      <h2 style="font-size:16px;font-weight:600;padding-right:24px;line-height:1.3">${esc(l.company)}</h2>
+      <div style="font-size:12px;color:#888;margin-top:3px">${esc(l.industry||'')}${l.phone?' · Aloitus: '+esc(l.phone):''}${l.email?' · Valmistuu: '+esc(l.email):''}</div>
     </div>
     <div class="field-grid">
       <div class="field"><label>Vaihe</label>
@@ -430,6 +441,16 @@ function renderDetail(){
       <button class="btn btn-danger" onclick="delLead(${l.id})">Poista hanke</button>
     </div>
   </div>`;
+
+  document.body.appendChild(overlay);
+}
+
+function closeModal(){
+  const el=document.getElementById('modal-overlay');
+  if(el)el.remove();
+  selected=null;
+  renderView();
+  renderMetrics();
 }
 
 function setView(v){
@@ -519,10 +540,84 @@ async function saveNew(){
   render();
 }
 
-function init(){
-  if(SCRIPT_URL)loadFromSheets();
-  else{showSetup();setSyncBadge('err','Ei yhdistetty');}
+function openCalendar(id){
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+
+  // Remove existing modal if any
+  const existing=document.getElementById('cal-modal');
+  if(existing)existing.remove();
+
+  const modal=document.createElement('div');
+  modal.id='cal-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem';
+  modal.innerHTML=`
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.15)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="font-size:16px;font-weight:600">📅 Lisää kalenteriin</h3>
+        <button onclick="document.getElementById('cal-modal').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <div style="font-size:13px;color:#666;margin-bottom:1rem">Kohde: <strong>${esc(l.company)}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase">Tapahtuman otsikko</label>
+          <input id="cal-title" value="${esc(l.company)} — ${esc(l.stage)}" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;outline:none">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase">Päivämäärä</label>
+            <input type="date" id="cal-date" value="${today()}" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;outline:none">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase">Kellonaika</label>
+            <input type="time" id="cal-time" value="09:00" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;outline:none">
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase">Kesto (tuntia)</label>
+          <select id="cal-duration" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;outline:none">
+            <option value="30">30 minuuttia</option>
+            <option value="60" selected>1 tunti</option>
+            <option value="90">1,5 tuntia</option>
+            <option value="120">2 tuntia</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase">Lisätiedot</label>
+          <textarea id="cal-desc" rows="3" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;outline:none;resize:vertical">${esc(l.company)}\nPääurakoitsija: ${esc(l.contact||'')}\nBudjetti: ${esc(l.role||'')}\nKunta: ${esc(l.industry||'')}</textarea>
+        </div>
+      </div>
+      <button onclick="addToGoogleCalendar(${l.id})" style="width:100%;padding:10px;background:#4285F4;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer">Avaa Google Kalenterissa →</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
 }
+
+function addToGoogleCalendar(id){
+  const title=document.getElementById('cal-title').value;
+  const date=document.getElementById('cal-date').value;
+  const time=document.getElementById('cal-time').value;
+  const duration=parseInt(document.getElementById('cal-duration').value);
+  const desc=document.getElementById('cal-desc').value;
+
+  if(!date||!time){alert('Valitse päivämäärä ja kellonaika.');return;}
+
+  const start=new Date(date+'T'+time);
+  const end=new Date(start.getTime()+duration*60000);
+
+  const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE`+
+    `&text=${encodeURIComponent(title)}`+
+    `&dates=${fmt(start)}/${fmt(end)}`+
+    `&details=${encodeURIComponent(desc)}`+
+    `&sf=true&output=xml`;
+
+  window.open(url,'_blank');
+  document.getElementById('cal-modal').remove();
+}
+
+
 
 // Boot
 if(sessionStorage.getItem('ky_rakennus_auth')==='ok'){
