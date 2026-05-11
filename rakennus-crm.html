@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rakennushanke CRM</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+
+/* Login */
+.login-screen{position:fixed;inset:0;background:#f5f5f3;display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:#fff;border:1px solid #e5e5e3;border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center}
+.login-box .icon{font-size:36px;margin-bottom:1rem}
+.login-box h2{font-size:18px;font-weight:600;margin-bottom:4px}
+.login-box p{font-size:13px;color:#888;margin-bottom:1.5rem}
+.login-box input{font-size:15px;padding:10px 14px;border:1px solid #e0e0de;border-radius:9px;width:100%;margin-bottom:10px;text-align:center;letter-spacing:2px;outline:none}
+.login-box input:focus{border-color:#E67E22}
+.login-box button{font-size:14px;padding:10px;border-radius:9px;border:none;background:#E67E22;color:#fff;width:100%;cursor:pointer;font-weight:500}
+.login-box button:hover{background:#CA6F1E}
+.login-error{font-size:12px;color:#dc2626;margin-top:8px;min-height:18px}
+
+/* Top bar */
+.topbar{background:#fff;border-bottom:1px solid #e5e5e3;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100;gap:10px}
+.topbar h1{font-size:15px;font-weight:600;white-space:nowrap}
+.topbar h1 span{color:#E67E22}
+.topbar .right{display:flex;align-items:center;gap:8px}
+.sync-badge{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:500}
+.sync-ok{background:#dcfce7;color:#166534}
+.sync-err{background:#fee2e2;color:#7f1d1d}
+.sync-loading{background:#fef9c3;color:#854d0e}
+
+.container{max-width:1400px;margin:0 auto;padding:1.5rem}
+
+/* Setup */
+.setup-banner{background:#fff8f3;border:1px solid #f5cba7;border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+.setup-banner h2{font-size:14px;font-weight:600;margin-bottom:8px;color:#E67E22}
+.setup-banner p{font-size:13px;color:#935116;margin-bottom:10px;line-height:1.5}
+.setup-banner input{font-size:13px;padding:7px 10px;border:1px solid #f5cba7;border-radius:7px;width:100%;max-width:500px;margin-bottom:8px;outline:none}
+.setup-banner input:focus{border-color:#E67E22}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem}
+@media(max-width:800px){.metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.metrics{grid-template-columns:1fr 1fr}}
+.metric{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:12px 14px}
+.metric .lbl{font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.metric .val{font-size:22px;font-weight:600}
+.metric .sub{font-size:10px;color:#aaa;margin-top:1px}
+
+/* Toolbar */
+.toolbar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{font-size:13px;padding:7px 10px;border:1px solid #e0e0de;border-radius:8px;background:#fff;color:#1a1a1a;outline:none}
+.toolbar input[type=text]{width:200px}
+.toolbar input:focus,.toolbar select:focus{border-color:#E67E22}
+.view-toggle{display:flex;border:1px solid #e0e0de;border-radius:8px;overflow:hidden;margin-left:auto}
+.view-toggle button{font-size:12px;padding:6px 14px;border:none;background:#fff;color:#666;cursor:pointer;font-family:inherit}
+.view-toggle button.active{background:#E67E22;color:#fff;font-weight:500}
+
+/* Pipeline */
+.pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:start}
+@media(max-width:1100px){.pipeline{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.pipeline{grid-template-columns:1fr 1fr}}
+.col-head{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between}
+.col-head .cnt{background:#f0f0ee;color:#666;font-size:10px;padding:1px 7px;border-radius:99px}
+.card{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:#E67E22}
+.card.sel{border-color:#E67E22;box-shadow:0 0 0 2px #fde9d5}
+.card .cn{font-size:13px;font-weight:600;line-height:1.3}
+.card .ura{font-size:11px;color:#888;margin-top:2px}
+.card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+.t-ei{background:#f0f0ee;color:#666}
+.t-otettu{background:#dbeafe;color:#1e40af}
+.t-maili{background:#ede9fe;color:#4c1d95}
+.t-tapaaminen{background:#fef9c3;color:#854d0e}
+.t-tarjous{background:#fed7aa;color:#7c2d12}
+.t-voitettu{background:#bbf7d0;color:#14532d}
+.t-havitty{background:#fee2e2;color:#7f1d1d}
+.card .budjetti{font-size:10px;color:#aaa;margin-top:5px}
+.empty-col{font-size:11px;color:#ccc;text-align:center;padding:1rem 0;border:1px dashed #e0e0de;border-radius:8px}
+
+/* List */
+.list-wrap{background:#fff;border:1px solid #e5e5e3;border-radius:10px;overflow:hidden;display:none}
+.list-wrap table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.list-wrap th{font-size:11px;font-weight:600;color:#888;text-align:left;padding:10px 12px;border-bottom:1px solid #e5e5e3;text-transform:uppercase;letter-spacing:.3px;background:#fafaf9}
+.list-wrap td{padding:9px 12px;border-bottom:1px solid #f0f0ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-wrap tr:hover td{background:#fafaf9;cursor:pointer}
+.list-wrap tr.sel td{background:#fff8f3}
+
+/* Detail panel */
+.panel{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.5rem;margin-top:1.25rem}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+.panel-head h2{font-size:16px;font-weight:600;line-height:1.3}
+.panel-head .sub{font-size:12px;color:#888;margin-top:2px}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:500px){.field-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.3px}
+.field input,.field select,.field textarea{font-size:13px;padding:7px 9px;border:1px solid #e0e0de;border-radius:7px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#E67E22}
+.field textarea{resize:vertical;min-height:60px}
+.notes-list{margin:10px 0}
+.note{border-left:2px solid #f5cba7;padding:5px 10px;margin-bottom:6px;font-size:12px;color:#555}
+.note .ts{font-size:10px;color:#aaa;margin-bottom:2px}
+.panel-actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
+
+.btn{font-size:13px;padding:7px 14px;border:1px solid #e0e0de;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;transition:background .1s}
+.btn:hover{background:#f5f5f3}
+.btn-primary{background:#E67E22;color:#fff;border-color:#E67E22}
+.btn-primary:hover{background:#CA6F1E}
+.btn-danger{color:#dc2626;border-color:#fca5a5}
+.btn-danger:hover{background:#fef2f2}
+.btn-sm{font-size:12px;padding:5px 12px;border:1px solid #e0e0de;border-radius:7px;background:#fff;color:#666;cursor:pointer;font-family:inherit}
+.btn-sm:hover{background:#f5f5f3}
+
+.add-panel{background:#fff;border:1px solid #E67E22;border-radius:12px;padding:1.5rem;margin-top:1.25rem}
+.add-panel h3{font-size:15px;font-weight:600;margin-bottom:1rem}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="icon">🏗️</div>
+    <h2>Rakennushanke CRM</h2>
+    <p>Syötä salasana kirjautuaksesi sisään</p>
+    <input type="password" id="pw-input" placeholder="Salasana" onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()">Kirjaudu sisään</button>
+    <div class="login-error" id="pw-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<div class="topbar">
+  <h1>Rakennushanke <span>CRM</span></h1>
+  <div class="right">
+    <span id="sync-badge" class="sync-badge sync-loading">Yhdistetään...</span>
+    <button class="btn-sm" onclick="manualSync()">Synkronoi</button>
+    <button class="btn btn-primary" onclick="openAdd()">+ Lisää hanke</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="setup-area"></div>
+  <div class="metrics" id="metrics"></div>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Hae kohdetta tai urakoitsijaa..." oninput="renderView()">
+    <select id="f-stage" onchange="renderView()">
+      <option value="">Kaikki vaiheet</option>
+      <option>Ei kontaktoitu</option>
+      <option>Otettu yhteyttä</option>
+      <option>Mailia laitettu</option>
+      <option>Tapaaminen sovittu</option>
+      <option>Tarjous sisällä</option>
+      <option>Voitettu</option>
+      <option>Hävitty</option>
+    </select>
+    <select id="f-kunta" onchange="renderView()">
+      <option value="">Kaikki kunnat</option>
+      <option>Helsinki</option>
+      <option>Espoo</option>
+      <option>Vantaa</option>
+      <option>Hyvinkää</option>
+      <option>Tuusula</option>
+      <option>Porvoo</option>
+      <option>Sipoo</option>
+      <option>Nurmijärvi</option>
+      <option>Vihti</option>
+    </select>
+    <div class="view-toggle">
+      <button id="vt-p" class="active" onclick="setView('pipeline')">Pipeline</button>
+      <button id="vt-l" onclick="setView('list')">Lista</button>
+    </div>
+  </div>
+
+  <div id="pipeline-wrap">
+    <div class="pipeline" id="pipeline"></div>
+  </div>
+  <div class="list-wrap" id="list-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:28%">Kohde</th>
+        <th style="width:10%">Kunta</th>
+        <th style="width:13%">Vaihe</th>
+        <th style="width:22%">Pääurakoitsija</th>
+        <th style="width:10%">Budjetti</th>
+        <th style="width:10%">Aloitus</th>
+        <th style="width:7%">Valmistuu</th>
+      </tr></thead>
+      <tbody id="list-body"></tbody>
+    </table>
+  </div>
+
+  <div id="add-area"></div>
+  <div id="detail-area"></div>
+</div>
+</div>
+
+<script>
+const STAGES=['Ei kontaktoitu','Otettu yhteyttä','Mailia laitettu','Tapaaminen sovittu','Tarjous sisällä','Voitettu','Hävitty'];
+const TAG={'Ei kontaktoitu':'t-ei','Otettu yhteyttä':'t-otettu','Mailia laitettu':'t-maili','Tapaaminen sovittu':'t-tapaaminen','Tarjous sisällä':'t-tarjous','Voitettu':'t-voitettu','Hävitty':'t-havitty'};
+const PASSWORD='Payday2024!';
+const SCRIPT_URL_KEY='ky_rakennus_crm_url';
+let SCRIPT_URL=localStorage.getItem(SCRIPT_URL_KEY)||'';
+let leads=[];
+let selected=null;
+let currentView='pipeline';
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function today(){return new Date().toISOString().slice(0,10)}
+function nextId(){return Date.now()}
+
+// Password
+function checkPw(){
+  const val=document.getElementById('pw-input').value;
+  if(val===PASSWORD){
+    sessionStorage.setItem('ky_rakennus_auth','ok');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='';
+    init();
+  }else{
+    document.getElementById('pw-error').textContent='Väärä salasana.';
+    document.getElementById('pw-input').value='';
+  }
+}
+
+// Sync
+function setSyncBadge(state,text){
+  const el=document.getElementById('sync-badge');
+  el.className='sync-badge sync-'+state;
+  el.textContent=text;
+}
+
+async function apiGet(action){
+  const res=await fetch(SCRIPT_URL+'?action='+action+'&t='+Date.now());
+  return res.json();
+}
+
+async function apiPost(body){
+  const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(body)});
+  return res.json();
+}
+
+async function loadFromSheets(){
+  if(!SCRIPT_URL){showSetup();return;}
+  setSyncBadge('loading','Ladataan...');
+  try{
+    const data=await apiGet('getAll');
+    if(data.error)throw new Error(data.error);
+    leads=data.leads||[];
+    setSyncBadge('ok','Synkronoitu ✓');
+    hideSetup();
+    render();
+  }catch(e){
+    setSyncBadge('err','Yhteysvirhe');
+    showSetup(true);
+  }
+}
+
+async function saveLeadToSheets(lead){
+  if(!SCRIPT_URL)return;
+  try{
+    const {notes,...d}=lead;
+    await apiPost({action:'saveLead',lead:d});
+  }catch(e){setSyncBadge('err','Tallennusvirhe');}
+}
+
+async function deleteLeadFromSheets(id){
+  if(!SCRIPT_URL)return;
+  try{await apiPost({action:'deleteLead',id});}catch(e){}
+}
+
+async function addNoteToSheets(leadId,note){
+  if(!SCRIPT_URL)return;
+  try{await apiPost({action:'addNote',leadId,note});}catch(e){}
+}
+
+async function manualSync(){
+  setSyncBadge('loading','Synkronoidaan...');
+  try{
+    await apiPost({action:'saveAll',leads});
+    setSyncBadge('ok','Synkronoitu ✓');
+  }catch(e){setSyncBadge('err','Virhe');}
+}
+
+function showSetup(isError=false){
+  document.getElementById('setup-area').innerHTML=`
+    <div class="setup-banner">
+      <h2>${isError?'Yhteysvirhe — tarkista URL':'Yhdistä Google Sheetsiin'}</h2>
+      <p>Liitä tähän Google Apps Script Web app URL.</p>
+      <input type="text" id="url-input" placeholder="https://script.google.com/macros/s/..." value="${esc(SCRIPT_URL)}">
+      <br><button class="btn btn-primary" onclick="saveUrl()">Yhdistä</button>
+      ${isError?'<span style="font-size:12px;color:#dc2626;margin-left:10px">Tarkista URL</span>':''}
+    </div>`;
+}
+
+function hideSetup(){document.getElementById('setup-area').innerHTML='';}
+
+function saveUrl(){
+  const val=document.getElementById('url-input')?.value?.trim();
+  if(!val){alert('Syötä URL ensin.');return;}
+  SCRIPT_URL=val;
+  localStorage.setItem(SCRIPT_URL_KEY,val);
+  loadFromSheets();
+}
+
+// Filter
+function filtered(){
+  const q=(document.getElementById('search')?.value||'').toLowerCase();
+  const st=document.getElementById('f-stage')?.value||'';
+  const ku=document.getElementById('f-kunta')?.value||'';
+  return leads.filter(l=>{
+    if(q&&!l.company.toLowerCase().includes(q)&&!(l.contact||'').toLowerCase().includes(q))return false;
+    if(st&&l.stage!==st)return false;
+    if(ku&&l.industry!==ku)return false;
+    return true;
+  });
+}
+
+// Render
+function render(){renderMetrics();renderView();renderDetail();}
+
+function renderMetrics(){
+  const all=leads;
+  const active=all.filter(l=>!['Voitettu','Hävitty'].includes(l.stage)).length;
+  const won=all.filter(l=>l.stage==='Voitettu').length;
+  const offer=all.filter(l=>l.stage==='Tarjous sisällä').length;
+  const meeting=all.filter(l=>l.stage==='Tapaaminen sovittu').length;
+  const rate=all.length?Math.round(won/all.length*100):0;
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="lbl">Hankkeet yhteensä</div><div class="val">${all.length}</div><div class="sub">listalla</div></div>
+    <div class="metric"><div class="lbl">Aktiiviset</div><div class="val">${active}</div><div class="sub">käynnissä</div></div>
+    <div class="metric"><div class="lbl">Tapaamiset</div><div class="val" style="color:#854d0e">${meeting}</div><div class="sub">sovittu</div></div>
+    <div class="metric"><div class="lbl">Tarjoukset</div><div class="val" style="color:#7c2d12">${offer}</div><div class="sub">sisällä</div></div>
+    <div class="metric"><div class="lbl">Voitto-%</div><div class="val" style="color:${rate>20?'#16a34a':'inherit'}">${rate}%</div><div class="sub">${won} voitettu</div></div>
+  `;
+}
+
+function renderView(){
+  if(currentView==='pipeline')renderPipeline();
+  else renderList();
+}
+
+function renderPipeline(){
+  const f=filtered();
+  let html='';
+  for(const stage of STAGES){
+    const cards=f.filter(l=>l.stage===stage);
+    html+=`<div>
+      <div class="col-head"><span style="font-size:10px">${stage}</span><span class="cnt">${cards.length}</span></div>
+      ${cards.length===0?'<div class="empty-col">—</div>':''}
+      ${cards.map(l=>`
+        <div class="card${selected===l.id?' sel':''}" onclick="selectLead(${l.id})">
+          <div class="cn">${esc(l.company)}</div>
+          <div class="ura">${esc(l.contact||'')}</div>
+          <div class="meta"><span class="tag ${TAG[l.stage]||'t-ei'}">${l.stage}</span><span style="font-size:10px;color:#aaa">${esc(l.industry||'')}</span></div>
+          ${l.role?`<div class="budjetti">💰 ${esc(l.role)}</div>`:''}
+        </div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('pipeline').innerHTML=html;
+}
+
+function renderList(){
+  const f=filtered();
+  document.getElementById('list-body').innerHTML=f.map(l=>`
+    <tr class="${selected===l.id?'sel':''}" onclick="selectLead(${l.id})" style="cursor:pointer">
+      <td title="${esc(l.company)}">${esc(l.company)}</td>
+      <td>${esc(l.industry||'')}</td>
+      <td><span class="tag ${TAG[l.stage]||'t-ei'}">${l.stage}</span></td>
+      <td title="${esc(l.contact||'')}">${esc(l.contact||'')}</td>
+      <td>${esc(l.role||'')}</td>
+      <td>${esc(l.phone||'')}</td>
+      <td>${esc(l.email||'')}</td>
+    </tr>`).join('');
+}
+
+function renderDetail(){
+  const el=document.getElementById('detail-area');
+  if(!selected){el.innerHTML='';return;}
+  const l=leads.find(x=>x.id===selected);
+  if(!l){el.innerHTML='';return;}
+  el.innerHTML=`<div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>${esc(l.company)}</h2>
+        <div class="sub">${esc(l.industry||'')}${l.phone?' · Aloitus: '+esc(l.phone):''}${l.email?' · Valmistuu: '+esc(l.email):''}</div>
+      </div>
+      <button class="btn" onclick="selected=null;render()">Sulje ✕</button>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Vaihe</label>
+        <select onchange="upd(${l.id},'stage',this.value)">
+          ${STAGES.map(s=>`<option${l.stage===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Kunta</label>
+        <input value="${esc(l.industry||'')}" onchange="upd(${l.id},'industry',this.value)" placeholder="Helsinki">
+      </div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Pääurakoitsija</label>
+        <input value="${esc(l.contact||'')}" onchange="upd(${l.id},'contact',this.value)">
+      </div>
+      <div class="field"><label>Budjetti</label>
+        <input value="${esc(l.role||'')}" onchange="upd(${l.id},'role',this.value)" placeholder="esim. 5 milj.">
+      </div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Aloitus</label>
+        <input value="${esc(l.phone||'')}" onchange="upd(${l.id},'phone',this.value)" placeholder="Toukokuu 2026">
+      </div>
+      <div class="field"><label>Valmistuminen</label>
+        <input value="${esc(l.email||'')}" onchange="upd(${l.id},'email',this.value)" placeholder="Joulukuu 2026">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Yhteyshenkilö / Muuta</label>
+      <input value="${esc(l.next||'')}" onchange="upd(${l.id},'next',this.value)" placeholder="Nimi, puhelin, sähköposti...">
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Lisää muistiinpano</label>
+      <div style="display:flex;gap:6px">
+        <input id="ni" placeholder="Puhelun yhteenveto, sovittu asia..." style="flex:1">
+        <button class="btn btn-primary" onclick="addNote(${l.id})">Lisää</button>
+      </div>
+    </div>
+    ${l.notes&&l.notes.length?`<div class="notes-list">${l.notes.slice().reverse().map(n=>`
+      <div class="note"><div class="ts">${n.ts}</div>${esc(n.text)}</div>`).join('')}</div>`:''}
+    <div class="panel-actions">
+      <button class="btn btn-danger" onclick="delLead(${l.id})">Poista hanke</button>
+    </div>
+  </div>`;
+}
+
+function setView(v){
+  currentView=v;
+  document.getElementById('pipeline-wrap').style.display=v==='pipeline'?'':'none';
+  document.getElementById('list-wrap').style.display=v==='list'?'':'none';
+  document.getElementById('vt-p').className=v==='pipeline'?'active':'';
+  document.getElementById('vt-l').className=v==='list'?'active':'';
+  renderView();
+}
+
+function selectLead(id){selected=selected===id?null:id;render();}
+
+async function upd(id,field,val){
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+  l[field]=val;
+  setSyncBadge('loading','Tallennetaan...');
+  await saveLeadToSheets(l);
+  setSyncBadge('ok','Tallennettu ✓');
+  render();
+}
+
+async function addNote(id){
+  const inp=document.getElementById('ni');
+  if(!inp||!inp.value.trim())return;
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+  if(!l.notes)l.notes=[];
+  const note={ts:today(),text:inp.value.trim()};
+  l.notes.push(note);
+  setSyncBadge('loading','Tallennetaan...');
+  await addNoteToSheets(id,note);
+  setSyncBadge('ok','Tallennettu ✓');
+  render();
+}
+
+async function delLead(id){
+  if(!confirm('Poistetaanko hanke?'))return;
+  leads=leads.filter(x=>x.id!==id);
+  selected=null;
+  await deleteLeadFromSheets(id);
+  setSyncBadge('ok','Poistettu ✓');
+  render();
+}
+
+function openAdd(){
+  document.getElementById('add-area').innerHTML=`<div class="add-panel">
+    <h3>Uusi hanke</h3>
+    <div class="field-grid">
+      <div class="field"><label>Kohde *</label><input id="a-company" placeholder="As Oy Esimerkki"></div>
+      <div class="field"><label>Kunta *</label><input id="a-industry" placeholder="Helsinki"></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Pääurakoitsija</label><input id="a-contact" placeholder="Rakennusyhtiö Oy"></div>
+      <div class="field"><label>Budjetti</label><input id="a-role" placeholder="esim. 5 milj."></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Aloitus</label><input id="a-phone" placeholder="Toukokuu 2026"></div>
+      <div class="field"><label>Valmistuminen</label><input id="a-email" placeholder="Joulukuu 2026"></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Vaihe</label>
+        <select id="a-stage">${STAGES.map(s=>`<option>${s}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Yhteyshenkilö</label><input id="a-next" placeholder="Nimi, puhelin..."></div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn btn-primary" onclick="saveNew()">Tallenna Sheetsiin</button>
+      <button class="btn" onclick="document.getElementById('add-area').innerHTML=''">Peruuta</button>
+    </div>
+  </div>`;
+  document.getElementById('a-company').focus();
+}
+
+async function saveNew(){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const company=g('a-company'),industry=g('a-industry');
+  if(!company){alert('Kohde on pakollinen.');return;}
+  const l={id:nextId(),company,contact:g('a-contact'),role:g('a-role'),phone:g('a-phone'),email:g('a-email'),industry,stage:g('a-stage')||'Ei kontaktoitu',prio:'Normaali',next:g('a-next'),nextDate:'',notes:[],createdAt:today(),updatedAt:today()};
+  leads.push(l);
+  selected=l.id;
+  document.getElementById('add-area').innerHTML='';
+  setSyncBadge('loading','Tallennetaan...');
+  await saveLeadToSheets(l);
+  setSyncBadge('ok','Tallennettu ✓');
+  render();
+}
+
+function init(){
+  if(SCRIPT_URL)loadFromSheets();
+  else{showSetup();setSyncBadge('err','Ei yhdistetty');}
+}
+
+// Boot
+if(sessionStorage.getItem('ky_rakennus_auth')==='ok'){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='';
+  init();
+}else{
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+</script>
+</body>
+</html>
